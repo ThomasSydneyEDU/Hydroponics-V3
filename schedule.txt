@@ -1,0 +1,24 @@
+# Schedule Format: DEVICE START_TIME DURATION DESCRIPTION
+# DEVICE: LT, LB, PT, PB (e.g., Lights Top, Lights Bottom, Pump Top, Pump Bottom)
+# START_TIME: HH:MM (24-hour format)
+# DURATION: Duration in seconds
+# DESCRIPTION: A brief description of the schedule
+
+# Lights schedule (on from 9 AM to 9 PM)
+LT 09:00 43200 Lights Top on from 9:00 AM to 9:00 PM
+LB 09:00 43200 Lights Bottom on from 9:00 AM to 9:00 PM
+
+# Pumps schedule (on for 15 minutes every 4 hours starting at midnight)
+PT 00:00 900 Pump Top on from 12:00 AM to 12:15 AM
+PT 04:00 900 Pump Top on from 4:00 AM to 4:15 AM
+PT 08:00 900 Pump Top on from 8:00 AM to 8:15 AM
+PT 12:00 900 Pump Top on from 12:00 PM to 12:15 PM
+PT 16:00 900 Pump Top on from 4:00 PM to 4:15 PM
+PT 20:00 900 Pump Top on from 8:00 PM to 8:15 PM
+
+PB 00:00 900 Pump Bottom on from 12:00 AM to 12:15 AM
+PB 04:00 900 Pump Bottom on from 4:00 AM to 4:15 AM
+PB 08:00 900 Pump Bottom on from 8:00 AM to 8:15 AM
+PB 12:00 900 Pump Bottom on from 12:00 PM to 12:15 PM
+PB 16:00 900 Pump Bottom on from 4:00 PM to 4:15 PM
+PB 20:00 900 Pump Bottom on from 8:00 PM to 8:15 PM
