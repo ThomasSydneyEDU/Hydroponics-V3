@@ -43,9 +43,17 @@ class HydroponicsGUI:
         self.left_frame = tk.Frame(self.main_frame, width=400, padx=10, pady=10)
         self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+        # Relay switches group
+        self.relay_frame = tk.LabelFrame(self.left_frame, text="Manual Relay Control", font=("Helvetica", 16))
+        self.relay_frame.pack(fill="both", expand=True, anchor="nw")
+
         # Right frame for temperature and other indicators
         self.right_frame = tk.Frame(self.main_frame, width=400, padx=10, pady=10)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
+        # Sensors group
+        sensor_frame = tk.LabelFrame(self.right_frame, text="Sensor Readings", font=("Helvetica", 16))
+        sensor_frame.pack(fill="both", expand=True, anchor="nw")
 
         # Manual controls on the left
         self.states = {
@@ -54,52 +62,68 @@ class HydroponicsGUI:
             "pump_top": {"state": False, "schedule": "", "description_label": None, "device_code": "PT"},
             "pump_bottom": {"state": False, "schedule": "", "description_label": None, "device_code": "PB"},
         }
-        create_switch(self, "Lights (Top)", 0, "lights_top", "LT")
-        create_switch(self, "Lights (Bottom)", 1, "lights_bottom", "LB")
-        create_switch(self, "Pump (Top)", 2, "pump_top", "PT")
-        create_switch(self, "Pump (Bottom)", 3, "pump_bottom", "PB")
+        create_switch(self.relay_frame, self, "Lights (Top)", 0, "lights_top", "LT")
+        create_switch(self.relay_frame, self, "Lights (Bottom)", 1, "lights_bottom", "LB")
+        create_switch(self.relay_frame, self, "Pump (Top)", 2, "pump_top", "PT")
+        create_switch(self.relay_frame, self, "Pump (Bottom)", 3, "pump_bottom", "PB")
 
         self.states.update({
             "sensor_pump_top": {"state": False, "schedule": "", "description_label": None, "device_code": "ST"},
             "sensor_pump_bottom": {"state": False, "schedule": "", "description_label": None, "device_code": "SB"},
             "drain_actuator": {"state": False, "schedule": "", "description_label": None, "device_code": "DR"},
         })
-        create_switch(self, "Sensor Pump (Top)", 4, "sensor_pump_top", "ST")
-        create_switch(self, "Sensor Pump (Bottom)", 5, "sensor_pump_bottom", "SB")
-        create_switch(self, "Drain Actuator", 6, "drain_actuator", "DR")
+        create_switch(self.relay_frame, self, "Sensor Pump (Top)", 4, "sensor_pump_top", "ST")
+        create_switch(self.relay_frame, self, "Sensor Pump (Bottom)", 5, "sensor_pump_bottom", "SB")
+        create_switch(self.relay_frame, self, "Drain Actuator", 6, "drain_actuator", "DR")
 
         # Temperature display
         self.temperature_label = tk.Label(
-            self.right_frame, text="Temperature: -- °C | -- °F", font=("Helvetica", 20), anchor="w", justify="left"
+            sensor_frame, text="Temperature: -- °C | -- °F", font=("Helvetica", 20), anchor="w", justify="left"
         )
         self.temperature_label.pack(pady=5, anchor="w", fill="x")
 
         # Additional Arduino data labels
-        self.ec_label = tk.Label(self.right_frame, text="EC: --", font=("Helvetica", 18), anchor="w", justify="left")
+        self.ec_label = tk.Label(sensor_frame, text="EC: --", font=("Helvetica", 18), anchor="w", justify="left")
         self.ec_label.pack(pady=3, anchor="w", fill="x")
 
-        self.ph_label = tk.Label(self.right_frame, text="pH: --", font=("Helvetica", 18), anchor="w", justify="left")
+        self.ph_label = tk.Label(sensor_frame, text="pH: --", font=("Helvetica", 18), anchor="w", justify="left")
         self.ph_label.pack(pady=3, anchor="w", fill="x")
 
-        self.water_temp1_label = tk.Label(self.right_frame, text="Water Temp 1: -- °C", font=("Helvetica", 18), anchor="w", justify="left")
+        self.water_temp1_label = tk.Label(sensor_frame, text="Water Temp 1: -- °C", font=("Helvetica", 18), anchor="w", justify="left")
         self.water_temp1_label.pack(pady=3, anchor="w", fill="x")
 
-        self.water_temp2_label = tk.Label(self.right_frame, text="Water Temp 2: -- °C", font=("Helvetica", 18), anchor="w", justify="left")
+        self.water_temp2_label = tk.Label(sensor_frame, text="Water Temp 2: -- °C", font=("Helvetica", 18), anchor="w", justify="left")
         self.water_temp2_label.pack(pady=3, anchor="w", fill="x")
 
         self.water_level_top_label = tk.Label(
-            self.right_frame, text="Water Level (Top): --", font=("Helvetica", 18), anchor="w", justify="left"
+            sensor_frame, text="Water Level (Top): --", font=("Helvetica", 18), anchor="w", justify="left"
         )
         self.water_level_top_label.pack(pady=3, anchor="w", fill="x")
 
         self.water_level_bottom_label = tk.Label(
-            self.right_frame, text="Water Level (Bottom): --", font=("Helvetica", 18), anchor="w", justify="left"
+            sensor_frame, text="Water Level (Bottom): --", font=("Helvetica", 18), anchor="w", justify="left"
         )
         self.water_level_bottom_label.pack(pady=3, anchor="w", fill="x")
 
+        # Scheduling group
+        schedule_frame = tk.LabelFrame(self.right_frame, text="Scheduling", font=("Helvetica", 16))
+        schedule_frame.pack(fill="x", pady=10, anchor="w")
+
+        # Schedule toggle
+        self.schedule_enabled = tk.BooleanVar(value=True)
+        schedule_toggle = tk.Checkbutton(
+            schedule_frame,
+            text="Schedule On",
+            font=("Helvetica", 16),
+            variable=self.schedule_enabled,
+            pady=5,
+            command=lambda: None,  # update_schedule_visibility(self),
+        )
+        schedule_toggle.pack(pady=5, anchor="w")
+
         # Reset button
         self.reset_button = tk.Button(
-            self.right_frame,
+            schedule_frame,
             text="Reset to Schedule",
             font=("Helvetica", 14),
             bg="blue",
@@ -108,18 +132,6 @@ class HydroponicsGUI:
             command=self.reset_to_arduino_schedule,
         )
         self.reset_button.pack(pady=5, anchor="w")
-
-        # Schedule toggle
-        self.schedule_enabled = tk.BooleanVar(value=True)
-        schedule_toggle = tk.Checkbutton(
-            self.right_frame,
-            text="Schedule On",
-            font=("Helvetica", 16),
-            variable=self.schedule_enabled,
-            pady=5,
-            command=lambda: None,  # update_schedule_visibility(self),
-        )
-        schedule_toggle.pack(pady=5, anchor="w")
 
         # Start clock updates
         update_clock(self)
