@@ -1,8 +1,28 @@
+import os
 import tkinter as tk
 import threading
 import time
 import serial
 from datetime import datetime
+
+LOG_DIR = "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+ERROR_LOG_FILE = os.path.join(LOG_DIR, "error_log.txt")
+
+SENSOR_LOG_FILE = os.path.join(LOG_DIR, f"sensor_log_{datetime.now().strftime('%Y-%m-%d')}.csv")
+
+
+# Initialize sensor log file if needed
+def init_sensor_log():
+    if not os.path.exists(SENSOR_LOG_FILE) or os.path.getsize(SENSOR_LOG_FILE) == 0:
+        with open(SENSOR_LOG_FILE, "w") as log:
+            log.write("timestamp,dht_temp,dht_humidity,water_temp1,water_temp2,ph,ec\n")
+
+init_sensor_log()
+
+def log_error(message):
+    with open(ERROR_LOG_FILE, "a") as f:
+        f.write(f"[{datetime.now()}] {message}\n")
 
 # -------------------- Arduino Communication --------------------
 
@@ -89,8 +109,6 @@ def start_relay_state_listener(gui):
 
 def create_switch(gui, label_text, row, state_key, device_code):
     label = tk.Label(gui.left_frame, text=label_text, font=("Helvetica", 18))
-    label.grid(row=row, column=0, padx=10, pady=10, sticky="w")
-
     button = tk.Button(
         gui.left_frame,
         text="OFF",
@@ -100,26 +118,15 @@ def create_switch(gui, label_text, row, state_key, device_code):
         width=10,
         command=lambda: gui.toggle_switch(state_key),
     )
-    button.grid(row=row, column=1, padx=10, pady=10)
-
     light = tk.Canvas(gui.left_frame, width=20, height=20, highlightthickness=0)
-    light.grid(row=row, column=2, padx=10, pady=10)
+    # Place the widgets: light left, label center, button right
+    light.grid(row=row, column=0, padx=10, pady=10)
+    label.grid(row=row, column=1, padx=10, pady=10, sticky="w")
+    button.grid(row=row, column=2, padx=10, pady=10)
     light.create_oval(2, 2, 18, 18, fill="red")
 
     gui.states[state_key]["button"] = button
     gui.states[state_key]["light"] = light
-
-def create_reset_button(gui):
-    reset_button = tk.Button(
-        gui.left_frame,
-        text="Reset to Schedule",
-        font=("Helvetica", 16),
-        bg="blue",
-        fg="white",
-        width=20,
-        command=gui.reset_to_arduino_schedule,
-    )
-    reset_button.grid(row=5, column=0, columnspan=3, pady=20)
 
 def update_clock(gui):
     def refresh_clock():
@@ -143,7 +150,11 @@ def update_connection_status(gui):
                     if time.time() - last_state_time > 10:
                         update_indicator(gui.connection_indicator, "red")
                     else:
-                        update_indicator(gui.connection_indicator, "green")
+                        # Before setting indicator to green, check actual connection
+                        if check_arduino_connection(gui.arduino):
+                            update_indicator(gui.connection_indicator, "green")
+                        else:
+                            update_indicator(gui.connection_indicator, "red")
                 except Exception:
                     update_indicator(gui.connection_indicator, "red")
                     gui.arduino = None
@@ -164,12 +175,27 @@ def update_relay_states(self, message):
 
     try:
         parts = message[len("STATE:"):].split(",")
-        if len(parts) < 13:
-            print("⚠ Incomplete STATE message.")
+        if len(parts) != 13:
+            log_error(f"Expected 13 values in STATE message, got {len(parts)}: {message}")
+            print(f"⚠ Expected 13 values in STATE message, got {len(parts)}: {message}")
+            return
+        try:
+            float(parts[7])  # Air temperature
+            float(parts[8])  # Humidity
+            float(parts[11])  # pH
+            float(parts[12])  # EC
+        except ValueError:
+            log_error(f"Invalid numeric data in STATE message: {message}")
+            print(f"⚠ Invalid numeric data in STATE message: {message}")
             return
 
         # Update relay indicator lights
-        relay_keys = ["lights_top", "lights_bottom", "pump_top", "pump_bottom"]
+        relay_keys = [
+            "lights_top", "lights_bottom",
+            "pump_top", "pump_bottom",
+            "sensor_pump_top", "sensor_pump_bottom",
+            "drain"
+        ]
         for i, key in enumerate(relay_keys):
             state = parts[i] == "1"
             self.states[key]["state"] = state
@@ -195,5 +221,14 @@ def update_relay_states(self, message):
 
         # Optional: add water temp display to GUI if desired
 
+        # Rotate the sensor log file if it exceeds 5 MB
+        if os.path.getsize(SENSOR_LOG_FILE) > 5 * 1024 * 1024:  # 5 MB
+            rotated_file = SENSOR_LOG_FILE.replace(".csv", f"_{datetime.now().strftime('%H%M%S')}.csv")
+            os.rename(SENSOR_LOG_FILE, rotated_file)
+            init_sensor_log()
+        with open(SENSOR_LOG_FILE, "a") as log:
+            log.write(f"{datetime.now()},{dht_temp},{dht_humidity},{water_temp1},{water_temp2},{ph},{ec}\n")
+
     except Exception as e:
+        log_error(f"Error parsing STATE message: {e}")
         print(f"⚠ Error parsing STATE message: {e}")

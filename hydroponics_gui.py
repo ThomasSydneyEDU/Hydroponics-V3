@@ -14,7 +14,7 @@ class HydroponicsGUI:
         self.root = root
         self.arduino = arduino
         self.root.title("Hydroponics System Control")
-        self.root.geometry("800x550")  # Set resolution to match Raspberry Pi touchscreen
+        self.root.geometry("800x580")  # Set resolution to match Raspberry Pi touchscreen
         # self.root.attributes("-fullscreen", False)  # Enable fullscreen mode
 
         # Top frame for clock and Arduino connection indicator
@@ -22,7 +22,7 @@ class HydroponicsGUI:
         self.top_frame.pack(fill=tk.X, side=tk.TOP)
 
         # Clock display
-        self.clock_label = tk.Label(self.top_frame, text="", font=("Helvetica", 24))
+        self.clock_label = tk.Label(self.top_frame, text="", font=("Helvetica", 18))
         self.clock_label.pack(side=tk.LEFT, padx=20)
 
         # Arduino connection indicator with label
@@ -168,7 +168,7 @@ def main():
             arduino = None
 
     root = tk.Tk()
-    root.geometry("800x550")  # Match Raspberry Pi touchscreen resolution
+    root.geometry("800x580")  # Match Raspberry Pi touchscreen resolution
     app = HydroponicsGUI(root, arduino)
 
     def on_closing():
