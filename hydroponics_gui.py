@@ -81,6 +81,9 @@ class HydroponicsGUI:
             sensor_frame, text="Temperature: -- °C | -- °F", font=("Helvetica", 20), anchor="w", justify="left"
         )
         self.temperature_label.pack(pady=5, anchor="w", fill="x")
+        # Humidity display
+        self.humidity_label = tk.Label(sensor_frame, text="Humidity: -- %", font=("Helvetica", 18), anchor="w", justify="left")
+        self.humidity_label.pack(pady=3, anchor="w", fill="x")
 
         # Additional Arduino data labels
         self.ec_label = tk.Label(sensor_frame, text="EC: --", font=("Helvetica", 18), anchor="w", justify="left")
