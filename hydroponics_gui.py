@@ -14,11 +14,11 @@ class HydroponicsGUI:
         self.root = root
         self.arduino = arduino
         self.root.title("Hydroponics System Control")
-        self.root.geometry("800x480")  # Set resolution to match Raspberry Pi touchscreen
+        self.root.geometry("800x550")  # Set resolution to match Raspberry Pi touchscreen
         # self.root.attributes("-fullscreen", False)  # Enable fullscreen mode
 
         # Top frame for clock and Arduino connection indicator
-        self.top_frame = tk.Frame(self.root, padx=20, pady=10)
+        self.top_frame = tk.Frame(self.root, padx=10, pady=5)
         self.top_frame.pack(fill=tk.X, side=tk.TOP)
 
         # Clock display
@@ -40,11 +40,11 @@ class HydroponicsGUI:
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
         # Left frame for manual controls (switches and lights)
-        self.left_frame = tk.Frame(self.main_frame, width=400, padx=20, pady=20)
+        self.left_frame = tk.Frame(self.main_frame, width=400, padx=10, pady=10)
         self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Right frame for temperature and other indicators
-        self.right_frame = tk.Frame(self.main_frame, width=400, padx=20, pady=20)
+        self.right_frame = tk.Frame(self.main_frame, width=400, padx=10, pady=10)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
         # Manual controls on the left
@@ -72,30 +72,30 @@ class HydroponicsGUI:
         self.temperature_label = tk.Label(
             self.right_frame, text="Temperature: -- °C | -- °F", font=("Helvetica", 20), anchor="w", justify="left"
         )
-        self.temperature_label.pack(pady=10, anchor="w", fill="x")
+        self.temperature_label.pack(pady=5, anchor="w", fill="x")
 
         # Additional Arduino data labels
         self.ec_label = tk.Label(self.right_frame, text="EC: --", font=("Helvetica", 18), anchor="w", justify="left")
-        self.ec_label.pack(pady=5, anchor="w", fill="x")
+        self.ec_label.pack(pady=3, anchor="w", fill="x")
 
         self.ph_label = tk.Label(self.right_frame, text="pH: --", font=("Helvetica", 18), anchor="w", justify="left")
-        self.ph_label.pack(pady=5, anchor="w", fill="x")
+        self.ph_label.pack(pady=3, anchor="w", fill="x")
 
         self.water_temp1_label = tk.Label(self.right_frame, text="Water Temp 1: -- °C", font=("Helvetica", 18), anchor="w", justify="left")
-        self.water_temp1_label.pack(pady=5, anchor="w", fill="x")
+        self.water_temp1_label.pack(pady=3, anchor="w", fill="x")
 
         self.water_temp2_label = tk.Label(self.right_frame, text="Water Temp 2: -- °C", font=("Helvetica", 18), anchor="w", justify="left")
-        self.water_temp2_label.pack(pady=5, anchor="w", fill="x")
+        self.water_temp2_label.pack(pady=3, anchor="w", fill="x")
 
         self.water_level_top_label = tk.Label(
             self.right_frame, text="Water Level (Top): --", font=("Helvetica", 18), anchor="w", justify="left"
         )
-        self.water_level_top_label.pack(pady=5, anchor="w", fill="x")
+        self.water_level_top_label.pack(pady=3, anchor="w", fill="x")
 
         self.water_level_bottom_label = tk.Label(
             self.right_frame, text="Water Level (Bottom): --", font=("Helvetica", 18), anchor="w", justify="left"
         )
-        self.water_level_bottom_label.pack(pady=5, anchor="w", fill="x")
+        self.water_level_bottom_label.pack(pady=3, anchor="w", fill="x")
 
         # Reset button
         self.reset_button = tk.Button(
@@ -107,7 +107,7 @@ class HydroponicsGUI:
             width=20,
             command=self.reset_to_arduino_schedule,
         )
-        self.reset_button.pack(pady=10, anchor="w")
+        self.reset_button.pack(pady=5, anchor="w")
 
         # Schedule toggle
         self.schedule_enabled = tk.BooleanVar(value=True)
@@ -116,10 +116,10 @@ class HydroponicsGUI:
             text="Schedule On",
             font=("Helvetica", 16),
             variable=self.schedule_enabled,
-            pady=10,
+            pady=5,
             command=lambda: None,  # update_schedule_visibility(self),
         )
-        schedule_toggle.pack(pady=10, anchor="w")
+        schedule_toggle.pack(pady=5, anchor="w")
 
         # Start clock updates
         update_clock(self)
@@ -168,7 +168,7 @@ def main():
             arduino = None
 
     root = tk.Tk()
-    root.geometry("800x480")  # Match Raspberry Pi touchscreen resolution
+    root.geometry("800x550")  # Match Raspberry Pi touchscreen resolution
     app = HydroponicsGUI(root, arduino)
 
     def on_closing():
