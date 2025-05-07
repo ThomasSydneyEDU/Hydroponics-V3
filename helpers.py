@@ -108,21 +108,21 @@ def start_relay_state_listener(gui):
 # -------------------- GUI Helpers --------------------
 
 def create_switch(parent, gui, label_text, row, state_key, device_code):
-    label = tk.Label(parent, text=label_text, font=("Helvetica", 18))
+    label = tk.Label(parent, text=label_text, font=("Helvetica", 16))
     button = tk.Button(
         parent,
         text="OFF",
-        font=("Helvetica", 14),
+        font=("Helvetica", 12),
         bg="darkgrey",
         fg="white",
-        width=8,
+        width=6,
         command=lambda: gui.toggle_switch(state_key),
     )
     light = tk.Canvas(parent, width=20, height=20, highlightthickness=0)
     # Place the widgets: light left, label center, button right
-    light.grid(row=row, column=0, padx=10, pady=10)
-    label.grid(row=row, column=1, padx=10, pady=10, sticky="w")
-    button.grid(row=row, column=2, padx=10, pady=10)
+    light.grid(row=row, column=0, padx=5, pady=5)
+    label.grid(row=row, column=1, padx=5, pady=5, sticky="w")
+    button.grid(row=row, column=2, padx=5, pady=5)
     light.create_oval(2, 2, 18, 18, fill="red")
 
     gui.states[state_key]["button"] = button
