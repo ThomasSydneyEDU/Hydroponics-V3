@@ -1,15 +1,12 @@
 import tkinter as tk
-from gui_helpers import (
+from helpers import (
     create_switch,
-    create_reset_button,
     update_clock,
-    update_temperature,
-    update_arduino_data,
     update_connection_status,
-    load_schedule,
-    update_schedule_visibility,
+    connect_to_arduino,
+    send_command_to_arduino,
+    reset_to_arduino_schedule,
 )
-from arduino_helpers import connect_to_arduino, send_command_to_arduino
 
 
 class HydroponicsGUI:
@@ -18,7 +15,7 @@ class HydroponicsGUI:
         self.arduino = arduino
         self.root.title("Hydroponics System Control")
         self.root.geometry("800x480")  # Set resolution to match Raspberry Pi touchscreen
-        self.root.attributes("-fullscreen", False)  # Enable fullscreen mode
+        # self.root.attributes("-fullscreen", False)  # Enable fullscreen mode
 
         # Top frame for clock and Arduino connection indicator
         self.top_frame = tk.Frame(self.root, padx=20, pady=10)
@@ -35,7 +32,8 @@ class HydroponicsGUI:
         connection_label.grid(row=0, column=0, padx=(0, 10))
         self.connection_indicator = tk.Canvas(connection_frame, width=20, height=20, highlightthickness=0)
         self.connection_indicator.grid(row=0, column=1)
-        update_connection_status(self)
+        if self.arduino:
+            update_connection_status(self)
 
         # Main frame to organize layout
         self.main_frame = tk.Frame(self.root)
@@ -51,61 +49,83 @@ class HydroponicsGUI:
 
         # Manual controls on the left
         self.states = {
-            "lights_top": {"state": False, "schedule": "", "description_label": None},
-            "lights_bottom": {"state": False, "schedule": "", "description_label": None},
-            "pump_top": {"state": False, "schedule": "", "description_label": None},
-            "pump_bottom": {"state": False, "schedule": "", "description_label": None},
+            "lights_top": {"state": False, "schedule": "", "description_label": None, "device_code": "LT"},
+            "lights_bottom": {"state": False, "schedule": "", "description_label": None, "device_code": "LB"},
+            "pump_top": {"state": False, "schedule": "", "description_label": None, "device_code": "PT"},
+            "pump_bottom": {"state": False, "schedule": "", "description_label": None, "device_code": "PB"},
         }
         create_switch(self, "Lights (Top)", 0, "lights_top", "LT")
         create_switch(self, "Lights (Bottom)", 1, "lights_bottom", "LB")
         create_switch(self, "Pump (Top)", 2, "pump_top", "PT")
         create_switch(self, "Pump (Bottom)", 3, "pump_bottom", "PB")
 
+        self.states.update({
+            "sensor_pump_top": {"state": False, "schedule": "", "description_label": None, "device_code": "ST"},
+            "sensor_pump_bottom": {"state": False, "schedule": "", "description_label": None, "device_code": "SB"},
+            "drain_actuator": {"state": False, "schedule": "", "description_label": None, "device_code": "DR"},
+        })
+        create_switch(self, "Sensor Pump (Top)", 4, "sensor_pump_top", "ST")
+        create_switch(self, "Sensor Pump (Bottom)", 5, "sensor_pump_bottom", "SB")
+        create_switch(self, "Drain Actuator", 6, "drain_actuator", "DR")
+
+        # Temperature display
+        self.temperature_label = tk.Label(
+            self.right_frame, text="Temperature: -- °C | -- °F", font=("Helvetica", 20), anchor="w", justify="left"
+        )
+        self.temperature_label.pack(pady=10, anchor="w", fill="x")
+
+        # Additional Arduino data labels
+        self.ec_label = tk.Label(self.right_frame, text="EC: --", font=("Helvetica", 18), anchor="w", justify="left")
+        self.ec_label.pack(pady=5, anchor="w", fill="x")
+
+        self.ph_label = tk.Label(self.right_frame, text="pH: --", font=("Helvetica", 18), anchor="w", justify="left")
+        self.ph_label.pack(pady=5, anchor="w", fill="x")
+
+        self.water_temp1_label = tk.Label(self.right_frame, text="Water Temp 1: -- °C", font=("Helvetica", 18), anchor="w", justify="left")
+        self.water_temp1_label.pack(pady=5, anchor="w", fill="x")
+
+        self.water_temp2_label = tk.Label(self.right_frame, text="Water Temp 2: -- °C", font=("Helvetica", 18), anchor="w", justify="left")
+        self.water_temp2_label.pack(pady=5, anchor="w", fill="x")
+
+        self.water_level_top_label = tk.Label(
+            self.right_frame, text="Water Level (Top): --", font=("Helvetica", 18), anchor="w", justify="left"
+        )
+        self.water_level_top_label.pack(pady=5, anchor="w", fill="x")
+
+        self.water_level_bottom_label = tk.Label(
+            self.right_frame, text="Water Level (Bottom): --", font=("Helvetica", 18), anchor="w", justify="left"
+        )
+        self.water_level_bottom_label.pack(pady=5, anchor="w", fill="x")
+
         # Reset button
-        create_reset_button(self)
+        self.reset_button = tk.Button(
+            self.right_frame,
+            text="Reset to Schedule",
+            font=("Helvetica", 14),
+            bg="blue",
+            fg="white",
+            width=20,
+            command=self.reset_to_arduino_schedule,
+        )
+        self.reset_button.pack(pady=10, anchor="w")
 
         # Schedule toggle
         self.schedule_enabled = tk.BooleanVar(value=True)
         schedule_toggle = tk.Checkbutton(
-            self.left_frame,
+            self.right_frame,
             text="Schedule On",
             font=("Helvetica", 16),
             variable=self.schedule_enabled,
             pady=10,
-            command=lambda: update_schedule_visibility(self),
+            command=lambda: None,  # update_schedule_visibility(self),
         )
-        schedule_toggle.grid(row=5, column=0, columnspan=3)
+        schedule_toggle.pack(pady=10, anchor="w")
 
-        # Temperature display
-        self.temperature_label = tk.Label(
-            self.right_frame, text="Temperature: -- °C | -- °F", font=("Helvetica", 20)
-        )
-        self.temperature_label.pack(pady=10, anchor="center")
-
-        # Additional Arduino data labels
-        self.ec_label = tk.Label(self.right_frame, text="EC: --", font=("Helvetica", 18))
-        self.ec_label.pack(pady=5, anchor="center")
-
-        self.ph_label = tk.Label(self.right_frame, text="pH: --", font=("Helvetica", 18))
-        self.ph_label.pack(pady=5, anchor="center")
-
-        self.water_level_top_label = tk.Label(
-            self.right_frame, text="Water Level (Top): --", font=("Helvetica", 18)
-        )
-        self.water_level_top_label.pack(pady=5, anchor="center")
-
-        self.water_level_bottom_label = tk.Label(
-            self.right_frame, text="Water Level (Bottom): --", font=("Helvetica", 18)
-        )
-        self.water_level_bottom_label.pack(pady=5, anchor="center")
-
-        # Start clock and temperature updates
+        # Start clock updates
         update_clock(self)
-        update_temperature(self)
-        update_arduino_data(self)
 
         # Load and apply the schedule
-        load_schedule(self)
+        # load_schedule(self)
 
         # Ensure all switches are OFF at startup
         self.initialize_switches()
@@ -125,14 +145,39 @@ class HydroponicsGUI:
         print("Resetting all switches to OFF...")
         self.initialize_switches()
 
+    def reset_to_arduino_schedule(self):
+        reset_to_arduino_schedule(self.arduino)
+
 
 def main():
-    arduino = connect_to_arduino("/dev/ttyACM0", 9600)
+    import sys
+    simulate = "--simulate" in sys.argv
+
+    if simulate:
+        print("🧪 Running in simulation mode. No Arduino connection will be attempted.")
+        arduino = None
+    else:
+        import serial.tools.list_ports
+        ports = list(serial.tools.list_ports.comports())
+        if ports:
+            port = ports[0].device
+            print(f"Connecting to Arduino on port: {port}")
+            arduino = connect_to_arduino(port, 9600)
+        else:
+            print("No serial ports found. Cannot connect to Arduino.")
+            arduino = None
+
     root = tk.Tk()
+    root.geometry("800x480")  # Match Raspberry Pi touchscreen resolution
     app = HydroponicsGUI(root, arduino)
+
+    def on_closing():
+        if arduino:
+            arduino.close()
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop()
-    if arduino:
-        arduino.close()
 
 
 if __name__ == "__main__":
