@@ -105,25 +105,9 @@ class HydroponicsGUI:
         )
         self.water_level_bottom_label.pack(pady=3, anchor="w", fill="x")
 
-        # Scheduling group
-        schedule_frame = tk.LabelFrame(self.right_frame, text="Scheduling", font=("Helvetica", 16))
-        schedule_frame.pack(fill="x", pady=10, anchor="w")
-
-        # Schedule toggle
-        self.schedule_enabled = tk.BooleanVar(value=True)
-        schedule_toggle = tk.Checkbutton(
-            schedule_frame,
-            text="Schedule On",
-            font=("Helvetica", 16),
-            variable=self.schedule_enabled,
-            pady=5,
-            command=lambda: None,  # update_schedule_visibility(self),
-        )
-        schedule_toggle.pack(pady=5, anchor="w")
-
-        # Reset button
+        # Reset button (directly under right_frame)
         self.reset_button = tk.Button(
-            schedule_frame,
+            self.right_frame,
             text="Reset to Schedule",
             font=("Helvetica", 14),
             bg="blue",
