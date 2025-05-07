@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Define variables
-CODE_DIR="pi_code"               # Directory containing Python code and virtual environment
-VENV_DIR="$CODE_DIR/venv"        # Path to the virtual environment
+CODE_DIR="$(cd "$(dirname "$0")" && pwd)"  # Use current script's directory
+VENV_DIR="$CODE_DIR/venv"                  # Path to the virtual environment
 REQUIREMENTS_FILE="$CODE_DIR/requirements.txt"
-SCRIPT_NAME="hydroponics_gui.py" # Main Python script name
+SCRIPT_NAME="hydroponics_gui.py"           # Main Python script name
 
 echo "==== Hydro Monitor Script ===="
 

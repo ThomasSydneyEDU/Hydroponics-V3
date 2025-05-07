@@ -68,17 +68,47 @@ class HydroponicsGUI:
         self.humidity_label = tk.Label(self.humid_frame, text="-- %", font=("Helvetica", 20))
         self.humidity_label.pack()
 
+        # Water Temperature Sensors
+        self.water_temp_frame = tk.Frame(self.right_frame)
+        self.water_temp_frame.pack(pady=10)
+        tk.Label(self.water_temp_frame, text="Water Temp 1 (°C)", font=("Helvetica", 18, "bold")).pack()
+        self.water_temp1_label = tk.Label(self.water_temp_frame, text="-- °C", font=("Helvetica", 20))
+        self.water_temp1_label.pack()
+
+        tk.Label(self.water_temp_frame, text="Water Temp 2 (°C)", font=("Helvetica", 18, "bold")).pack()
+        self.water_temp2_label = tk.Label(self.water_temp_frame, text="-- °C", font=("Helvetica", 20))
+        self.water_temp2_label.pack()
+
+        # pH and EC Sensors
+        self.ph_frame = tk.Frame(self.right_frame)
+        self.ph_frame.pack(pady=10)
+        tk.Label(self.ph_frame, text="pH Sensor", font=("Helvetica", 18, "bold")).pack()
+        self.ph_label = tk.Label(self.ph_frame, text="--", font=("Helvetica", 20))
+        self.ph_label.pack()
+
+        self.ec_frame = tk.Frame(self.right_frame)
+        self.ec_frame.pack(pady=10)
+        tk.Label(self.ec_frame, text="EC Sensor", font=("Helvetica", 18, "bold")).pack()
+        self.ec_label = tk.Label(self.ec_frame, text="--", font=("Helvetica", 20))
+        self.ec_label.pack()
+
         # Manual controls
         self.states = {
             "lights_top": {"state": False, "device_code": "LT"},
             "lights_bottom": {"state": False, "device_code": "LB"},
             "pump_top": {"state": False, "device_code": "PT"},
             "pump_bottom": {"state": False, "device_code": "PB"},
+            "sensor_pump_top": {"state": False, "device_code": "ST"},
+            "sensor_pump_bottom": {"state": False, "device_code": "SB"},
+            "drain_actuator": {"state": False, "device_code": "DR"},
         }
         create_switch(self, "Lights (Top)", 0, "lights_top", "LT")
         create_switch(self, "Lights (Bottom)", 1, "lights_bottom", "LB")
         create_switch(self, "Pump (Top)", 2, "pump_top", "PT")
         create_switch(self, "Pump (Bottom)", 3, "pump_bottom", "PB")
+        create_switch(self, "Sensor Pump (Top)", 4, "sensor_pump_top", "ST")
+        create_switch(self, "Sensor Pump (Bottom)", 5, "sensor_pump_bottom", "SB")
+        create_switch(self, "Drain Actuator", 6, "drain_actuator", "DR")
 
         # Reset button
         create_reset_button(self)
@@ -143,19 +173,22 @@ class HydroponicsGUI:
             # Split and extract values (relay states + sensor data)
             state_values = response.split(":")[1].split(",")
 
-            if len(state_values) != 6:
+            if len(state_values) != 13:
                 print(f"⚠ Warning: Unexpected number of values in state update: {state_values}")
                 return
 
-            # Parse relay states
-            light_top, light_bottom, pump_top, pump_bottom = map(int, state_values[:4])
-            temperature, humidity = map(int, state_values[4:6])  # Convert sensor values to int
+            light_top, light_bottom, pump_top, pump_bottom, sensor_top, sensor_bottom, drain = map(int, state_values[:7])
+            temperature, humidity = map(int, state_values[7:9])
+            water_temp1, water_temp2 = map(float, state_values[9:11])
+            ph, ec = map(int, state_values[11:13])
 
-            # Update GUI switch indicators
             self.set_gui_state("lights_top", light_top)
             self.set_gui_state("lights_bottom", light_bottom)
             self.set_gui_state("pump_top", pump_top)
             self.set_gui_state("pump_bottom", pump_bottom)
+            self.set_gui_state("sensor_pump_top", sensor_top)
+            self.set_gui_state("sensor_pump_bottom", sensor_bottom)
+            self.set_gui_state("drain_actuator", drain)
 
             # ✅ Update the connection indicator to green (since valid data was received)
             self.connection_indicator.delete("all")
@@ -164,6 +197,10 @@ class HydroponicsGUI:
             # ✅ Update the temperature and humidity display
             self.temperature_label.config(text=f"{temperature} °C")
             self.humidity_label.config(text=f"{humidity} %")
+            self.water_temp1_label.config(text=f"{water_temp1:.1f} °C")
+            self.water_temp2_label.config(text=f"{water_temp2:.1f} °C")
+            self.ph_label.config(text=str(ph))
+            self.ec_label.config(text=str(ec))
 
         except Exception as e:
             print(f"⚠ Error parsing relay state: {e}")
