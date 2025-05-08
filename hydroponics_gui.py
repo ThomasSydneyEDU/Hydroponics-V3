@@ -85,12 +85,12 @@ class HydroponicsGUI:
         self.humidity_label = tk.Label(sensor_frame, text="Humidity: -- %", font=("Helvetica", 18), anchor="w", justify="left")
         self.humidity_label.pack(pady=3, anchor="w", fill="x")
 
-        # Additional Arduino data labels
-        self.ec_label = tk.Label(sensor_frame, text="EC: --", font=("Helvetica", 18), anchor="w", justify="left")
-        self.ec_label.pack(pady=3, anchor="w", fill="x")
-
-        self.ph_label = tk.Label(sensor_frame, text="pH: --", font=("Helvetica", 18), anchor="w", justify="left")
+        # Additional Arduino data labels (combined top/bottom for pH and EC)
+        self.ph_label = tk.Label(sensor_frame, text="pH (Top/Bottom): -- / --", font=("Helvetica", 18), anchor="w", justify="left")
         self.ph_label.pack(pady=3, anchor="w", fill="x")
+
+        self.ec_label = tk.Label(sensor_frame, text="EC (Top/Bottom): -- / --", font=("Helvetica", 18), anchor="w", justify="left")
+        self.ec_label.pack(pady=3, anchor="w", fill="x")
 
         self.water_temp1_label = tk.Label(sensor_frame, text="Water Temp 1: -- °C", font=("Helvetica", 18), anchor="w", justify="left")
         self.water_temp1_label.pack(pady=3, anchor="w", fill="x")
@@ -146,6 +146,28 @@ class HydroponicsGUI:
 
     def reset_to_arduino_schedule(self):
         reset_to_arduino_schedule(self.arduino)
+
+    def update_relay_states(self, message):
+        """
+        Update relay and sensor states from Arduino message and update float sensor water level labels.
+        Expects message format: ...;float_top;float_bottom;...
+        """
+        # Example message: ...;...;...;...;...;float_top;float_bottom;...
+        if not message.startswith("STATE:"):
+            return
+        parts = message[len("STATE:"):].strip().split(",")
+        if len(parts) != 17:
+            return
+        float_top = parts[7]
+        float_bottom = parts[8]
+        self.water_level_top_label.config(
+            text=f"Water Level (Top): {'HIGH' if float_top == '1' else 'LOW'}",
+            fg="black" if float_top == '1' else "red"
+        )
+        self.water_level_bottom_label.config(
+            text=f"Water Level (Bottom): {'HIGH' if float_bottom == '1' else 'LOW'}",
+            fg="black" if float_bottom == '1' else "red"
+        )
 
 
 def main():

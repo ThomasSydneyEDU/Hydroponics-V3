@@ -2,6 +2,12 @@
 
 # Define variables
 CODE_DIR="$(cd "$(dirname "$0")" && pwd)"  # Use current script's directory
+
+# Pull latest changes from Git
+echo "Updating local repository..."
+git -C "$CODE_DIR" stash push -m "Auto-stash before pull" >/dev/null 2>&1
+git -C "$CODE_DIR" pull
+git -C "$CODE_DIR" stash pop >/dev/null 2>&1 || true
 VENV_DIR="$CODE_DIR/venv"                  # Path to the virtual environment
 REQUIREMENTS_FILE="$CODE_DIR/requirements.txt"
 SCRIPT_NAME="hydroponics_gui.py"           # Main Python script name
@@ -23,6 +29,12 @@ fi
 # Activate the virtual environment
 echo "Activating virtual environment..."
 source "$VENV_DIR/bin/activate"
+
+# Enable screen blanking after 10 minutes of inactivity
+export DISPLAY=:0
+xset s 600
+xset +dpms
+xset dpms 0 0 600
 
 # Install required packages
 if [ -f "$REQUIREMENTS_FILE" ]; then

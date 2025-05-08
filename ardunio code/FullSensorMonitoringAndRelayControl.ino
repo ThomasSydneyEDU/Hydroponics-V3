@@ -41,6 +41,14 @@ unsigned long lastSensorUpdate = 0;
 bool overrideActive = false;
 unsigned long overrideEndTime = 0;  // Overrides expire after 10 minutes
 
+int lastMeasuredPh = -1;
+int lastMeasuredEc = -1;
+
+int lastMeasuredPhTop = -1;
+int lastMeasuredEcTop = 100;
+int lastMeasuredPhBottom = -2;
+int lastMeasuredEcBottom = 200;
+
 void setup() {
     // Set relay pins as outputs
     pinMode(RELAY_LIGHTS_TOP, OUTPUT);
@@ -109,10 +117,18 @@ void sendRelayState() {
     waterSensors.requestTemperatures();
     float waterTemp1 = waterSensors.getTempC(tempSensor1);
     float waterTemp2 = waterSensors.getTempC(tempSensor2);
-    int ph = analogRead(PH_PIN);
-    int ec = analogRead(EC_PIN);
+    // DS18B20 error fallback
+    if (waterTemp1 == -127.0) waterTemp1 = -1;
+    if (waterTemp2 == -127.0) waterTemp2 = -1;
+    int phTop = lastMeasuredPhTop;
+    int ecTop = lastMeasuredEcTop;
+    int phBottom = lastMeasuredPhBottom;
+    int ecBottom = lastMeasuredEcBottom;
     int temp = (int)dht.readTemperature(); // Convert float to int
     int humid = (int)dht.readHumidity();   // Convert float to int
+
+    int floatTop = digitalRead(FLOAT_TOP_PIN);
+    int floatBottom = digitalRead(FLOAT_BOTTOM_PIN);
 
     // If sensor readings fail, send default values (-1)
     if (isnan(temp) || isnan(humid)) {
@@ -135,6 +151,10 @@ void sendRelayState() {
     Serial.print(",");
     Serial.print(digitalRead(RELAY_DRAIN_ACTUATOR));
     Serial.print(",");
+    Serial.print(floatTop);
+    Serial.print(",");
+    Serial.print(floatBottom);
+    Serial.print(",");
     Serial.print(temp);
     Serial.print(",");
     Serial.print(humid);
@@ -143,9 +163,13 @@ void sendRelayState() {
     Serial.print(",");
     Serial.print(waterTemp2);
     Serial.print(",");
-    Serial.print(ph);
+    Serial.print(phTop);
     Serial.print(",");
-    Serial.println(ec);
+    Serial.print(ecTop);
+    Serial.print(",");
+    Serial.print(phBottom);
+    Serial.print(",");
+    Serial.println(ecBottom);
 }
 
 // Function to read and send temperature & humidity
@@ -277,15 +301,109 @@ void incrementTime() {
 
 // Function to run the schedule
 void runSchedule() {
-    if (overrideActive) return; // Skip schedule if overridden
+    if (overrideActive) return;
 
-    // **Lights Schedule (9 AM - 9 PM)**
-    bool lightsState = (hours >= 9 && hours < 21);
-    digitalWrite(RELAY_LIGHTS_TOP, lightsState ? HIGH : LOW);
-    digitalWrite(RELAY_LIGHTS_BOTTOM, lightsState ? HIGH : LOW);
+    // Lights on from 7:00 AM to 7:00 PM
+    bool lightsOn = (hours >= 7 && hours < 19);
+    digitalWrite(RELAY_LIGHTS_TOP, lightsOn ? HIGH : LOW);
+    digitalWrite(RELAY_LIGHTS_BOTTOM, lightsOn ? HIGH : LOW);
 
-    // **Pumps Schedule (15 minutes every 4 hours)**
-    bool pumpsState = (minutes < 15) && (hours % 4 == 0);
-    digitalWrite(RELAY_PUMP_TOP, pumpsState ? HIGH : LOW);
-    digitalWrite(RELAY_PUMP_BOTTOM, pumpsState ? HIGH : LOW);
+    // Daytime pump schedule: 2 minutes on at 7, 9, 11, 13, 15, 17
+    bool pumpOn = false;
+    if (lightsOn && minutes < 2 &&
+        (hours == 7 || hours == 9 || hours == 11 || hours == 13 || hours == 15 || hours == 17)) {
+        pumpOn = true;
+    }
+    digitalWrite(RELAY_PUMP_TOP, pumpOn ? HIGH : LOW);
+    digitalWrite(RELAY_PUMP_BOTTOM, pumpOn ? HIGH : LOW);
+
+    // Morning bottom system measurement
+    if (hours == 10 && minutes == 0 && seconds < 6) {
+        digitalWrite(RELAY_SENSOR_PUMP_BOTTOM, HIGH);
+    } else if (hours == 10 && minutes == 0 && seconds >= 6) {
+        digitalWrite(RELAY_SENSOR_PUMP_BOTTOM, LOW);
+    } else if (hours == 10 && minutes == 10) {
+        digitalWrite(RELAY_DRAIN_ACTUATOR, HIGH);
+    } else if (hours == 10 && minutes == 15) {
+        digitalWrite(RELAY_DRAIN_ACTUATOR, LOW);
+    }
+
+    // Morning top system measurement
+    if (hours == 10 && minutes == 20 && seconds < 6) {
+        digitalWrite(RELAY_SENSOR_PUMP_TOP, HIGH);
+    } else if (hours == 10 && minutes == 20 && seconds >= 6) {
+        digitalWrite(RELAY_SENSOR_PUMP_TOP, LOW);
+    } else if (hours == 10 && minutes == 30) {
+        digitalWrite(RELAY_DRAIN_ACTUATOR, HIGH);
+    } else if (hours == 10 && minutes == 35) {
+        digitalWrite(RELAY_DRAIN_ACTUATOR, LOW);
+    }
+
+    // Afternoon bottom system measurement
+    if (hours == 17 && minutes == 0 && seconds < 6) {
+        digitalWrite(RELAY_SENSOR_PUMP_BOTTOM, HIGH);
+    } else if (hours == 17 && minutes == 0 && seconds >= 6) {
+        digitalWrite(RELAY_SENSOR_PUMP_BOTTOM, LOW);
+    } else if (hours == 17 && minutes == 10) {
+        digitalWrite(RELAY_DRAIN_ACTUATOR, HIGH);
+    } else if (hours == 17 && minutes == 15) {
+        digitalWrite(RELAY_DRAIN_ACTUATOR, LOW);
+    }
+
+    // Afternoon top system measurement
+    if (hours == 17 && minutes == 20 && seconds < 6) {
+        digitalWrite(RELAY_SENSOR_PUMP_TOP, HIGH);
+    } else if (hours == 17 && minutes == 20 && seconds >= 6) {
+        digitalWrite(RELAY_SENSOR_PUMP_TOP, LOW);
+    } else if (hours == 17 && minutes == 30) {
+        digitalWrite(RELAY_DRAIN_ACTUATOR, HIGH);
+    } else if (hours == 17 && minutes == 35) {
+        digitalWrite(RELAY_DRAIN_ACTUATOR, LOW);
+    }
+
+    if ((hours == 10 && minutes == 5 && seconds == 0) || 
+        (hours == 17 && minutes == 5 && seconds == 0)) {
+        measureAndStoreAnalogSensors(false);  // bottom
+    }
+    if ((hours == 10 && minutes == 25 && seconds == 0) ||
+        (hours == 17 && minutes == 25 && seconds == 0)) {
+        measureAndStoreAnalogSensors(true);   // top
+    }
+}
+
+// Function to average analog sensors (PH and EC) for 1 minute and store results
+void measureAndStoreAnalogSensors(bool isTopSystem) {
+    int floatTop = digitalRead(FLOAT_TOP_PIN);
+    int floatBottom = digitalRead(FLOAT_BOTTOM_PIN);
+
+    if ((isTopSystem && floatTop == 0) || (!isTopSystem && floatBottom == 0)) {
+        Serial.println("Skipping EC/PH measurement due to low water level.");
+        return;
+    }
+
+    const unsigned long duration = 60000;
+    unsigned long startTime = millis();
+    int phSum = 0;
+    int ecSum = 0;
+    int count = 0;
+
+    while (millis() - startTime < duration) {
+        phSum += analogRead(PH_PIN);
+        ecSum += analogRead(EC_PIN);
+        count++;
+        delay(200);
+    }
+
+    if (isTopSystem) {
+        lastMeasuredPhTop = phSum / count;
+        lastMeasuredEcTop = ecSum / count;
+    } else {
+        lastMeasuredPhBottom = phSum / count;
+        lastMeasuredEcBottom = ecSum / count;
+    }
+
+    Serial.print("AVG_PH:");
+    Serial.print(isTopSystem ? lastMeasuredPhTop : lastMeasuredPhBottom);
+    Serial.print(" AVG_EC:");
+    Serial.println(isTopSystem ? lastMeasuredEcTop : lastMeasuredEcBottom);
 }

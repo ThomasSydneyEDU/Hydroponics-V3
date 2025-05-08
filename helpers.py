@@ -16,7 +16,7 @@ SENSOR_LOG_FILE = os.path.join(LOG_DIR, f"sensor_log_{datetime.now().strftime('%
 def init_sensor_log():
     if not os.path.exists(SENSOR_LOG_FILE) or os.path.getsize(SENSOR_LOG_FILE) == 0:
         with open(SENSOR_LOG_FILE, "w") as log:
-            log.write("timestamp,dht_temp,dht_humidity,water_temp1,water_temp2,ph,ec\n")
+            log.write("timestamp,dht_temp,dht_humidity,water_temp1,water_temp2,ph_top,ec_top,ph_bottom,ec_bottom,float_top,float_bottom\n")
 
 init_sensor_log()
 
@@ -168,6 +168,15 @@ def update_indicator(indicator, color):
     indicator.delete("all")
     indicator.create_oval(2, 2, 18, 18, fill=color)
 
+def color_for_value(value, low, high):
+    try:
+        val = float(value)
+        if val < low or val > high:
+            return "red"
+        return "black"
+    except ValueError:
+        return "gray"
+
 def update_relay_states(self, message):
     """Parse STATE message from Arduino and update GUI elements."""
     if not message.startswith("STATE:"):
@@ -175,15 +184,17 @@ def update_relay_states(self, message):
 
     try:
         parts = message[len("STATE:"):].split(",")
-        if len(parts) != 13:
-            log_error(f"Expected 13 values in STATE message, got {len(parts)}: {message}")
-            print(f"⚠ Expected 13 values in STATE message, got {len(parts)}: {message}")
+        if len(parts) != 17:
+            log_error(f"Expected 17 values in STATE message, got {len(parts)}: {message}")
+            print(f"⚠ Expected 17 values in STATE message, got {len(parts)}: {message}")
             return
         try:
-            float(parts[7])  # Air temperature
-            float(parts[8])  # Humidity
-            float(parts[11])  # pH
-            float(parts[12])  # EC
+            float(parts[9])   # Air temperature
+            float(parts[10])  # Humidity
+            float(parts[13])  # pH top
+            float(parts[14])  # EC top
+            float(parts[15])  # pH bottom
+            float(parts[16])  # EC bottom
         except ValueError:
             log_error(f"Invalid numeric data in STATE message: {message}")
             print(f"⚠ Invalid numeric data in STATE message: {message}")
@@ -203,21 +214,46 @@ def update_relay_states(self, message):
             self.states[key]["light"].delete("all")
             self.states[key]["light"].create_oval(2, 2, 18, 18, fill="green" if state else "red")
 
+        # Float sensors
+        float_top = parts[7]
+        float_bottom = parts[8]
+        self.water_level_top_label.config(
+            text=f"Water Level (Top): {'HIGH' if float_top == '1' else 'LOW'}",
+            fg="black" if float_top == '1' else "red"
+        )
+        self.water_level_bottom_label.config(
+            text=f"Water Level (Bottom): {'HIGH' if float_bottom == '1' else 'LOW'}",
+            fg="black" if float_bottom == '1' else "red"
+        )
+
         # Air temperature and humidity
-        dht_temp = parts[7]
-        dht_humidity = parts[8]
+        dht_temp = parts[9]
+        dht_humidity = parts[10]
         self.temperature_label.config(text=f"Temperature: {dht_temp} °C | Humidity: {dht_humidity} %")
 
         # Water temperatures
-        water_temp1 = parts[9]
-        water_temp2 = parts[10]
+        water_temp1 = parts[11]
+        water_temp2 = parts[12]
 
-        # pH and EC (raw analog values)
-        ph = parts[11]
-        ec = parts[12]
+        # pH and EC (top and bottom)
+        ph_top = parts[13]
+        ec_top = parts[14]
+        ph_bottom = parts[15]
+        ec_bottom = parts[16]
 
-        self.ph_label.config(text=f"pH: {ph}")
-        self.ec_label.config(text=f"EC: {ec}")
+        ph_color_top = color_for_value(ph_top, 5.5, 6.5)
+        ph_color_bottom = color_for_value(ph_bottom, 5.5, 6.5)
+        self.ph_label.config(
+            text=f"pH (Top/Bottom): {ph_top} / {ph_bottom}",
+            fg=ph_color_top if ph_color_top != "black" or ph_color_bottom == "black" else ph_color_bottom
+        )
+
+        ec_color_top = color_for_value(ec_top, 1.0, 2.5)
+        ec_color_bottom = color_for_value(ec_bottom, 1.0, 2.5)
+        self.ec_label.config(
+            text=f"EC (Top/Bottom): {ec_top} / {ec_bottom}",
+            fg=ec_color_top if ec_color_top != "black" or ec_color_bottom == "black" else ec_color_bottom
+        )
 
         # Optional: add water temp display to GUI if desired
 
@@ -227,7 +263,7 @@ def update_relay_states(self, message):
             os.rename(SENSOR_LOG_FILE, rotated_file)
             init_sensor_log()
         with open(SENSOR_LOG_FILE, "a") as log:
-            log.write(f"{datetime.now()},{dht_temp},{dht_humidity},{water_temp1},{water_temp2},{ph},{ec}\n")
+            log.write(f"{datetime.now()},{dht_temp},{dht_humidity},{water_temp1},{water_temp2},{ph_top},{ec_top},{ph_bottom},{ec_bottom},{float_top},{float_bottom}\n")
 
     except Exception as e:
         log_error(f"Error parsing STATE message: {e}")
