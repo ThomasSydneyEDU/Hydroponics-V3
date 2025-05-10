@@ -202,9 +202,14 @@ void handleCommand(String command) {
         runSchedule();  
         sendRelayState();  
     } else if (command.startsWith("LT:") || command.startsWith("LB:") || 
-               command.startsWith("PT:") || command.startsWith("PB:") ||
-               command.startsWith("ST:") || command.startsWith("SB:") || command.startsWith("DR:")) {
+               command.startsWith("PT:") || command.startsWith("PB:")) {
         overrideDevice(command);
+    //} else if (command.startsWith("ST:") || command.startsWith("SB:") || command.startsWith("DR:")) {
+    //    overrideDevice(command);
+    } else if (command == "GET_RELAYS") {
+        sendRelayStatusOnly();
+    } else if (command == "GET_SENSORS") {
+        sendSensorStatusOnly();
     } else {
         Serial.println("Unknown command: " + command);
     }
@@ -227,15 +232,15 @@ void overrideDevice(String command) {
     } else if (command.startsWith("PB:")) {
         relayPin = RELAY_PUMP_BOTTOM;
         deviceName = "Pump Bottom";
-    } else if (command.startsWith("ST:")) {
-        relayPin = RELAY_SENSOR_PUMP_TOP;
-        deviceName = "Sensor Pump Top";
-    } else if (command.startsWith("SB:")) {
-        relayPin = RELAY_SENSOR_PUMP_BOTTOM;
-        deviceName = "Sensor Pump Bottom";
-    } else if (command.startsWith("DR:")) {
-        relayPin = RELAY_DRAIN_ACTUATOR;
-        deviceName = "Drain Actuator";
+    //} else if (command.startsWith("ST:")) {
+    //    relayPin = RELAY_SENSOR_PUMP_TOP;
+    //    deviceName = "Sensor Pump Top";
+    //} else if (command.startsWith("SB:")) {
+    //    relayPin = RELAY_SENSOR_PUMP_BOTTOM;
+    //    deviceName = "Sensor Pump Bottom";
+    //} else if (command.startsWith("DR:")) {
+    //    relayPin = RELAY_DRAIN_ACTUATOR;
+    //    deviceName = "Drain Actuator";
     } else {
         Serial.println("Unknown command: " + command);
         return;
@@ -317,6 +322,7 @@ void runSchedule() {
     digitalWrite(RELAY_PUMP_TOP, pumpOn ? HIGH : LOW);
     digitalWrite(RELAY_PUMP_BOTTOM, pumpOn ? HIGH : LOW);
 
+    /*
     // Morning bottom system measurement
     if (hours == 10 && minutes == 0 && seconds < 6) {
         digitalWrite(RELAY_SENSOR_PUMP_BOTTOM, HIGH);
@@ -369,9 +375,12 @@ void runSchedule() {
         (hours == 17 && minutes == 25 && seconds == 0)) {
         measureAndStoreAnalogSensors(true);   // top
     }
+    */
 }
 
+// TODO: revisit this function later
 // Function to average analog sensors (PH and EC) for 1 minute and store results
+/*
 void measureAndStoreAnalogSensors(bool isTopSystem) {
     int floatTop = digitalRead(FLOAT_TOP_PIN);
     int floatBottom = digitalRead(FLOAT_BOTTOM_PIN);
@@ -406,4 +415,53 @@ void measureAndStoreAnalogSensors(bool isTopSystem) {
     Serial.print(isTopSystem ? lastMeasuredPhTop : lastMeasuredPhBottom);
     Serial.print(" AVG_EC:");
     Serial.println(isTopSystem ? lastMeasuredEcTop : lastMeasuredEcBottom);
+}
+*/
+
+void sendRelayStatusOnly() {
+    Serial.print("RELAYS:");
+    Serial.print(digitalRead(RELAY_LIGHTS_TOP));
+    Serial.print(",");
+    Serial.print(digitalRead(RELAY_LIGHTS_BOTTOM));
+    Serial.print(",");
+    Serial.print(digitalRead(RELAY_PUMP_TOP));
+    Serial.print(",");
+    Serial.print(digitalRead(RELAY_PUMP_BOTTOM));
+    Serial.print(",");
+    Serial.print(digitalRead(RELAY_SENSOR_PUMP_TOP));
+    Serial.print(",");
+    Serial.print(digitalRead(RELAY_SENSOR_PUMP_BOTTOM));
+    Serial.print(",");
+    Serial.println(digitalRead(RELAY_DRAIN_ACTUATOR));
+}
+
+void sendSensorStatusOnly() {
+    waterSensors.requestTemperatures();
+    float waterTemp1 = waterSensors.getTempC(tempSensor1);
+    float waterTemp2 = waterSensors.getTempC(tempSensor2);
+    if (waterTemp1 == -127.0) waterTemp1 = -1;
+    if (waterTemp2 == -127.0) waterTemp2 = -1;
+
+    int temp = (int)dht.readTemperature();
+    int humid = (int)dht.readHumidity();
+    if (isnan(temp) || isnan(humid)) {
+        temp = -1;
+        humid = -1;
+    }
+
+    int floatTop = digitalRead(FLOAT_TOP_PIN);
+    int floatBottom = digitalRead(FLOAT_BOTTOM_PIN);
+
+    Serial.print("SENSORS:");
+    Serial.print(temp);
+    Serial.print(",");
+    Serial.print(humid);
+    Serial.print(",");
+    Serial.print(waterTemp1);
+    Serial.print(",");
+    Serial.print(waterTemp2);
+    Serial.print(",");
+    Serial.print(floatTop);
+    Serial.print(",");
+    Serial.println(floatBottom);
 }

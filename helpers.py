@@ -82,28 +82,29 @@ def set_time_on_arduino(arduino):
         except Exception as e:
             print(f"⚠ Error sending time to Arduino: {e}")
 
-def reset_to_arduino_schedule(arduino):
-    if not arduino:
-        print("⚠ Arduino is not connected. Cannot reset schedule.")
-        return
-    print("🔄 Resetting to Arduino schedule...")
-    send_command_to_arduino(arduino, "RESET_SCHEDULE\n")
-    time.sleep(1)
-    send_command_to_arduino(arduino, "GET_STATE\n")
 
-def start_relay_state_listener(gui):
-    def listen_for_state():
-        while True:
-            try:
-                if gui.arduino and gui.arduino.in_waiting > 0:
-                    response = gui.arduino.readline().decode().strip()
-                    if response.startswith("STATE:"):
-                        gui.update_relay_states(response)
-            except Exception as e:
-                print(f"⚠ Error reading state update: {e}")
-                gui.arduino = None  # Mark as disconnected
-                break
-    threading.Thread(target=listen_for_state, daemon=True).start()
+# def reset_to_arduino_schedule(arduino):
+#     if not arduino:
+#         print("⚠ Arduino is not connected. Cannot reset schedule.")
+#         return
+#     print("🔄 Resetting to Arduino schedule...")
+#     send_command_to_arduino(arduino, "RESET_SCHEDULE\n")
+#     time.sleep(1)
+#     send_command_to_arduino(arduino, "GET_STATE\n")
+
+# def start_relay_state_listener(gui):
+#     def listen_for_state():
+#         while True:
+#             try:
+#                 if gui.arduino and gui.arduino.in_waiting > 0:
+#                     response = gui.arduino.readline().decode().strip()
+#                     if response.startswith("STATE:"):
+#                         gui.update_relay_states(response)
+#             except Exception as e:
+#                 print(f"⚠ Error reading state update: {e}")
+#                 gui.arduino = None  # Mark as disconnected
+#                 break
+#     threading.Thread(target=listen_for_state, daemon=True).start()
 
 # -------------------- GUI Helpers --------------------
 
