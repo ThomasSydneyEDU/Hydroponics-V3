@@ -5,7 +5,6 @@ from helpers import (
     update_connection_status,
     connect_to_arduino,
     send_command_to_arduino,
-    reset_to_arduino_schedule,
 )
 
 
